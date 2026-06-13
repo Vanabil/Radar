@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Radar Penyelamat Bencana - SLAM 2D</title>
+    <style>
+        /* Desain Retro-Futuristik Militer 100% Offline */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: #050508;
+            color: #4ade80;
+            font-family: 'Courier New', Courier, monospace;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            overflow-x: hidden;
+            /* Efek Grid Radar Klasik */
+            background-image: linear-gradient(rgba(34, 197, 94, 0.02) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(34, 197, 94, 0.02) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        .container {
+            max-width: 1100px;
+            width: 100%;
+            margin: 0 auto;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        header {
+            border-b: 1px solid rgba(34, 197, 94, 0.2);
+            padding-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            border-bottom: 1px solid rgba(34, 197, 94, 0.2);
+        }
+
+        h1 {
+            font-size: 24px;
+            letter-spacing: 2px;
+            color: #4ade80;
+            text-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
+        }
+
+        .subtitle {
+            font-size: 11px;
+            color: #15803d;
+            margin-top: 4px;
+        }
+
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            background-color: rgba(234, 179, 8, 0.1);
+            border: 1px solid rgba(234, 179, 8, 0.4);
+            color: #eab308;
+        }
+
+        /* Tata Letak Dua Kolom */
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+            flex: 1;
+        }
+
+        @media (min-width: 768px) {
+            .main-content {
+                grid-template-columns: 280px 1fr;
+            }
+        }
+
+        /* Panel Kontrol */
+        .panel {
+            background-color: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            border-radius: 8px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            height: fit-content;
+            box-shadow: 0 0 15px rgba(34, 197, 94, 0.05);
+        }
+
+        .panel-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #86efac;
+            border-bottom: 1px solid rgba(34, 197, 94, 0.2);
+            padding-bottom: 8px;
+        }
+
+        /* Gaya Tombol yang Responsif dan Mudah Diklik */
+        button {
+            width: 100%;
+            padding: 12px;
+            border-radius: 4px;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-green {
+            background-color: rgba(34, 197, 94, 0.1);
+            border: 1px solid #22c55e;
+            color: #22c55e;
+        }
+
+        .btn-green:hover {
+            background-color: #22c55e;
+            color: #000;
+            box-shadow: 0 0 10px rgba(34, 197, 94, 0.4);
+        }
+
+        .btn-blue {
+            background-color: rgba(59, 130, 246, 0.1);
+            border: 1px solid #3b82f6;
+            color: #3b82f6;
+        }
+
+        .btn-blue:hover {
+            background-color: #3b82f6;
+            color: #000;
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-red {
+            background-color: rgba(239, 68, 68, 0.1);
+            border: 1px solid #ef4444;
+            color: #ef4444;
+        }
+
+        .btn-red:hover {
+            background-color: #ef4444;
+            color: #fff;
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
+        }
+
+        /* Telemetri Grid */
+        .telemetry-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .telemetry-box {
+            background-color: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(34, 197, 94, 0.15);
+            border-radius: 4px;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .telemetry-label {
+            font-size: 9px;
+            color: #16a34a;
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        .telemetry-val {
+            font-size: 18px;
+            font-weight: bold;
+            color: #4ade80;
+        }
+
+        /* Layar Radar */
+        .radar-screen {
+            background-color: rgba(0, 0, 0, 0.8);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            border-radius: 8px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            min-height: 400px;
+            box-shadow: 0 0 15px rgba(34, 197, 94, 0.05);
+        }
+
+        .screen-label {
+            position: absolute;
+            top: 15px;
+            left: 20px;
+            font-size: 10px;
+            color: #16a34a;
+            letter-spacing: 1px;
+        }
+
+        canvas {
+            width: 100%;
+            max-width: 650px;
+            aspect-ratio: 1.8 / 1;
+        }
+
+        /* Banner Kesalahan */
+        .error-banner {
+            background-color: rgba(127, 29, 29, 0.9);
+            border: 1px solid #ef4444;
+            color: #fee2e2;
+            padding: 12px 20px;
+            border-radius: 6px;
+            font-size: 12px;
+            display: none;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .error-close {
+            background: none;
+            border: none;
+            color: #fca5a5;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            width: auto;
+            padding: 0;
+        }
+
+        footer {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 11px;
+            color: #15803d;
+            border-t: 1px solid rgba(34, 197, 94, 0.1);
+            padding-top: 15px;
+            border-top: 1px solid rgba(34, 197, 94, 0.1);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- HEADER -->
+        <header>
+            <div>
+                <h1>RESCUE RADAR SYSTEM</h1>
+                <div class="subtitle">PEMETAAN RERUNTUHAN REAL-TIME • PORTABEL 100% OFFLINE</div>
+            </div>
+            <div id="statusBadge" class="status-badge">STATUS: STANDBY</div>
+        </header>
+
+        <!-- BANNER EROR SISTEM -->
+        <div id="errorBanner" class="error-banner">
+            <span id="errorMessage">Pesan eror sistem.</span>
+            <button class="error-close" onclick="closeErrorBanner()">×</button>
+        </div>
+
+        <!-- ISI DASHBOARD -->
+        <div class="main-content">
+            <!-- PANEL KONTROL (KIRI) -->
+            <div class="panel">
+                <div class="panel-title">KONTROL HARDWARE</div>
+                <button id="btnConnect" class="btn-green">🔌 ARDUINO (USB)</button>
+                <button id="btnSimulate" class="btn-blue">🎮 RUN SIMULATOR</button>
+                <button id="btnClear" class="btn-red">🗑️ RESET PETA</button>
+
+                <div class="panel-title" style="margin-top: 10px;">DATA TELEMETRI</div>
+                <div class="telemetry-grid">
+                    <div class="telemetry-box">
+                        <span class="telemetry-label">SUDUT SERVO</span>
+                        <span id="txtAngle" class="telemetry-val">0°</span>
+                    </div>
+                    <div class="telemetry-box">
+                        <span class="telemetry-label">JARAK OBJEK</span>
+                        <span id="txtDistance" class="telemetry-val">--</span>
+                    </div>
+                </div>
+                <div class="telemetry-box" style="width: 100%;">
+                    <span class="telemetry-label">TOTAL DATA TITIK</span>
+                    <span id="txtPointsCount" class="telemetry-val" style="color: #f97316;">0</span>
+                </div>
+            </div>
+
+            <!-- LAYAR UTAMA RADAR (KANAN) -->
+            <div class="radar-screen">
+                <div class="screen-label">RADAR SCANNER OUTPUT (SKALA MAKS: 100 CM)</div>
+                <canvas id="radarCanvas"></canvas>
+            </div>
+        </div>
+
+        <!-- FOOTER -->
+        <footer>
+            Sistem Pemetaan Darurat Bencana • Hubungkan Arduino via Kabel USB di browser Google Chrome / Edge Laptop.
+        </footer>
+    </div>
+
+    <!-- SCRIPT LOGIKA UTAMA -->
+    <script>
+        // Log deteksi awal untuk memastikan JavaScript berjalan
+        console.log("Sistem Pemetaan Radar berhasil dimuat.");
+
+        const canvas = document.getElementById('radarCanvas');
+        const ctx = canvas.getContext('2d');
+        const btnConnect = document.getElementById('btnConnect');
+        const btnSimulate = document.getElementById('btnSimulate');
+        const btnClear = document.getElementById('btnClear');
+        const statusBadge = document.getElementById('statusBadge');
+        const txtAngle = document.getElementById('txtAngle');
+        const txtDistance = document.getElementById('txtDistance');
+        const txtPointsCount = document.getElementById('txtPointsCount');
+        const errorBanner = document.getElementById('errorBanner');
+        const errorMessage = document.getElementById('errorMessage');
+
+        // Parameter Utama
+        let isConnected = false;
+        let isSimulating = false;
+        let simInterval = null;
+        let serialPort = null;
+        let reader = null;
+        
+        let mapPoints = [];
+        let currentAngle = 0;
+        let currentDistance = 0;
+        const maxDistanceCM = 100;
+
+        let cx, cy, maxRadius;
+
+        function resizeCanvas() {
+            canvas.width = canvas.offsetWidth * window.devicePixelRatio;
+            canvas.height = canvas.offsetHeight * window.devicePixelRatio;
+            
+            cx = canvas.width / 2;
+            cy = canvas.height - (30 * window.devicePixelRatio);
+            maxRadius = Math.min(canvas.width / 2 - (20 * window.devicePixelRatio), canvas.height - (50 * window.devicePixelRatio));
+            
+            drawRadar();
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        // Notifikasi eror kustom
+        function showSystemError(msg) {
+            errorMessage.innerText = msg;
+            errorBanner.style.display = 'flex';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function closeErrorBanner() {
+            errorBanner.style.display = 'none';
+        }
+
+        // Fungsi menggambar radar
+        function drawRadar() {
+            if (!canvas.width) return;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 1. Gambar Grid Setengah Lingkaran
+            ctx.strokeStyle = 'rgba(34, 197, 94, 0.12)';
+            ctx.lineWidth = 1;
+            const numCircles = 4;
+            for (let i = 1; i <= numCircles; i++) {
+                const r = (maxRadius / numCircles) * i;
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, Math.PI, 2 * Math.PI);
+                ctx.stroke();
+
+                ctx.fillStyle = 'rgba(34, 197, 94, 0.4)';
+                ctx.font = ${10 * window.devicePixelRatio}px Courier New;
+                ctx.textAlign = 'center';
+                const distanceLabel = Math.round((maxDistanceCM / numCircles) * i);
+                ctx.fillText(${distanceLabel}cm, cx + r - (15 * window.devicePixelRatio), cy + (15 * window.devicePixelRatio));
+            }
+
+            // 2. Gambar Garis Derajat
+            const angles = [30, 60, 90, 120, 150];
+            angles.forEach(deg => {
+                const rad = (deg * Math.PI) / 180;
+                const rx = cx + maxRadius * Math.cos(Math.PI + rad);
+                const ry = cy + maxRadius * Math.sin(Math.PI + rad);
+                
+                ctx.strokeStyle = 'rgba(34, 197, 94, 0.08)';
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.lineTo(rx, ry);
+                ctx.stroke();
+
+                const tx = cx + (maxRadius + (15 * window.devicePixelRatio)) * Math.cos(Math.PI + rad);
+                const ty = cy + (maxRadius + (12 * window.devicePixelRatio)) * Math.sin(Math.PI + rad);
+                ctx.fillStyle = 'rgba(34, 197, 94, 0.6)';
+                ctx.fillText(${deg}°, tx, ty);
+            });
+
+            // 3. Gambar Titik Koordinat Hambatan (Peta)
+            mapPoints.forEach(pt => {
+                const umur = (Date.now() - pt.timestamp) / 1000;
+                const alpha = Math.max(0.15, 1 - (umur / 60)); // Titik memudar dalam 1 menit
+
+                ctx.fillStyle = rgba(249, 115, 22, ${alpha}); 
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, 3 * window.devicePixelRatio, 0, 2 * Math.PI);
+                ctx.fill();
+            });
+
+            // 4. Hubungkan Titik Dekat (Vektor Dinding)
+            ctx.strokeStyle = 'rgba(249, 115, 22, 0.35)';
+            ctx.lineWidth = 1.5 * window.devicePixelRatio;
+            for (let i = 0; i < mapPoints.length; i++) {
+                for (let j = i + 1; j < mapPoints.length; j++) {
+                    const d = Math.hypot(mapPoints[i].x - mapPoints[j].x, mapPoints[i].y - mapPoints[j].y);
+                    if (d < 25 * window.devicePixelRatio) {
+                        ctx.beginPath();
+                        ctx.moveTo(mapPoints[i].x, mapPoints[i].y);
+                        ctx.lineTo(mapPoints[j].x, mapPoints[j].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            // 5. Garis Utama Sapuan Radar (Hijau)
+            const radSweep = (currentAngle * Math.PI) / 180;
+            const sweepX = cx + maxRadius * Math.cos(Math.PI + radSweep);
+            const sweepY = cy + maxRadius * Math.sin(Math.PI + radSweep);
+
+            ctx.strokeStyle = '#22c55e';
+            ctx.lineWidth = 2 * window.devicePixelRatio;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(sweepX, sweepY);
+            ctx.stroke();
+
+            ctx.strokeStyle = 'rgba(34, 197, 94, 0.18)';
+            ctx.lineWidth = 8 * window.devicePixelRatio;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(sweepX, sweepY);
+            ctx.stroke();
+            
+            txtPointsCount.innerText = mapPoints.length;
+        }
+
+        // Inisialisasi awal koordinat canvas
+        resizeCanvas();
+
+        // Bersihkan memori peta rintangan
+        btnClear.addEventListener('click', () => {
+            mapPoints = [];
+            drawRadar();
+        });
+
+        // Pengolahan data pemetaan
+        function petakanSinyalRadar(angleData, distanceData) {
+            currentAngle = angleData;
+            currentDistance = distanceData;
+
+            txtAngle.innerText = ${currentAngle}°;
+            txtDistance.innerText = ${currentDistance} cm;
+
+            if (currentDistance < maxDistanceCM && currentDistance > 2) {
+                const rad = (currentAngle * Math.PI) / 180;
+                const scaleRatio = currentDistance / maxDistanceCM;
+                
+                const hitX = cx + (maxRadius * scaleRatio) * Math.cos(Math.PI + rad);
+                const hitY = cy + (maxRadius * scaleRatio) * Math.sin(Math.PI + rad);
+
+                let isDuplicate = false;
+                for (let i = 0; i < mapPoints.length; i++) {
+                    const d = Math.hypot(mapPoints[i].x - hitX, mapPoints[i].y - hitY);
+                    if (d < 10 * window.devicePixelRatio) {
+                        mapPoints[i].timestamp = Date.now();
+                        isDuplicate = true;
+                        break;
+                    }
+                }
+
+                if (!isDuplicate) {
+                    mapPoints.push({
+                        x: hitX,
+                        y: hitY,
+                        timestamp: Date.now()
+                    });
+                }
+            }
+
+            if (mapPoints.length > 500) {
+                mapPoints.shift();
+            }
+
+            drawRadar();
+        }
+
+        // ----------------- FITUR SIMULATOR OFFLINE -----------------
+        let simAngle = 15;
+        let simDirection = 1;
+
+        function startSimulation() {
+            if (isConnected) {
+                showSystemError("Gagal menjalankan simulator: Koneksi kabel USB Arduino sedang aktif.");
+                return;
+            }
+
+            isSimulating = true;
+            statusBadge.innerText = "MODE: SIMULATOR RUNNING";
+            statusBadge.style.borderColor = "rgba(59, 130, 246, 0.5)";
+            statusBadge.style.color = "#3b82f6";
+            statusBadge.style.backgroundColor = "rgba(59, 130, 246, 0.1)";
+            btnSimulate.innerText = "⏸️ STOP SIMULATOR";
+
+            simInterval = setInterval(() => {
+                simAngle += (3 * simDirection);
+                if (simAngle >= 165) {
+                    simAngle = 165;
+                    simDirection = -1;
+                } else if (simAngle <= 15) {
+                    simAngle = 15;
+                    simDirection = 1;
+                }
+
+                // Pola rintangan acak
+                let simDistance = 85;
+                if (simAngle >= 45 && simAngle <= 75) {
+                    simDistance = 45 + Math.floor(Math.random() * 5);
+                } else if (simAngle >= 110 && simAngle <= 135) {
+                    simDistance = 30 + Math.floor(Math.random() * 3);
+                }
+
+                petakanSinyalRadar(simAngle, simDistance);
+            }, 45);
+        }
+
+        function stopSimulation() {
+            isSimulating = false;
+            clearInterval(simInterval);
+            statusBadge.innerText = "STATUS: STANDBY";
+            statusBadge.style.borderColor = "rgba(234, 179, 8, 0.4)";
+            statusBadge.style.color = "#eab308";
+            statusBadge.style.backgroundColor = "rgba(234, 179, 8, 0.1)";
+            btnSimulate.innerText = "🎮 RUN SIMULATOR";
+        }
+
+        btnSimulate.addEventListener('click', () => {
+            if (isSimulating) {
+                stopSimulation();
+            } else {
+                startSimulation();
+            }
+        });
+
+        // ----------------- FITUR KONEKSI KABEL USB ARDUINO -----------------
+        async function connectSerial() {
+            if (!('serial' in navigator)) {
+                showSystemError("Sistem memblokir Web Serial. Fitur USB hanya bisa berjalan jika file ini di-upload ke server (HTTPS) atau dijalankan di 'localhost'. Gunakan tombol 'RUN SIMULATOR' untuk memperagakan fungsi radar tanpa kabel.");
+                return;
+            }
+
+            if (isSimulating) {
+                stopSimulation();
+            }
+
+            try {
+                serialPort = await navigator.serial.requestPort();
+                await serialPort.open({ baudRate: 9600 });
+                
+                isConnected = true;
+                statusBadge.innerText = "STATUS: HARDWARE AKTIF";
+                statusBadge.style.borderColor = "#22c55e";
+                statusBadge.style.color = "#22c55e";
+                statusBadge.style.backgroundColor = "rgba(34, 197, 94, 0.1)";
+                btnConnect.innerText = "🔌 PUTUSKAN ARDUINO";
+                
+                closeErrorBanner(); 
+                readSerialData();
+            } catch (err) {
+                showSystemError("Koneksi USB gagal: " + err.message);
+                isConnected = false;
+            }
+        }
+
+        async function disconnectSerial() {
+            isConnected = false;
+            if (reader) {
+                await reader.cancel();
+                reader = null;
+            }
+            if (serialPort) {
+                await serialPort.close();
+                serialPort = null;
+            }
+            
+            statusBadge.innerText = "STATUS: STANDBY";
+            statusBadge.style.borderColor = "rgba(234, 179, 8, 0.4)";
+            statusBadge.style.color = "#eab308";
+            statusBadge.style.backgroundColor = "rgba(234, 179, 8, 0.1)";
+            btnConnect.innerText = "🔌 ARDUINO (USB)";
+        }
+
+        async function readSerialData() {
+            const textDecoder = new TextDecoderStream();
+            const readableStreamClosed = serialPort.readable.pipeTo(textDecoder.writable);
+            reader = textDecoder.readable.getReader();
+            let buffer = "";
+
+            try {
+                while (isConnected) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    
+                    if (value) {
+                        buffer += value;
+                        let lines = buffer.split("\n");
+                        buffer = lines.pop(); 
+
+                        for (let line of lines) {
+                            line = line.trim();
+                            if (!line) continue;
+
+                            const parts = line.split(",");
+                            if (parts.length === 2) {
+                                const angleVal = parseInt(parts[0]);
+                                const distVal = parseInt(parts[1]);
+
+                                if (!isNaN(angleVal) && !isNaN(distVal)) {
+                                    petakanSinyalRadar(angleVal, distVal);
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("Gagal membaca serial data:", err);
+            } finally {
+                reader.releaseLock();
+            }
+        }
+
+        btnConnect.addEventListener('click', () => {
+            if (isConnected) {
+                disconnectSerial();
+            } else {
+                connectSerial();
+            }
+        });
+    </script>
+</body>
+</html>
